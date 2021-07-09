@@ -11,28 +11,33 @@ using System.Text.RegularExpressions;
 namespace PieceTree
 {
 
-    // const lfRegex = new RegExp(/\r\n|\r|\n/g);
-
-    // public int[] createUIntArray(number arr[]) {
-    //     let r;
-    //     if (arr[arr.length - 1] < 65536) {
-    //         r = new Uint16Array(arr.length);
-    //     } else {
-    //         r = new Uint32Array(arr.length);
-    //     }
-    //     r.set(arr, 0);
-    //     return r;
-    // }
-
-    internal class LineStarts
+    public struct TextPosition
     {
-        internal readonly int[] lineStarts;
-        internal readonly int cr;
-        internal readonly int lf;
-        internal readonly int crlf;
-        internal readonly bool isBasicASCII;
-        internal readonly string EOL;
-        internal bool isEOLNormalized => cr == 0 || cr == crlf;
+        /**
+        * Line number in current buffer
+        */
+        public readonly int line;
+        /**
+        * Column number in current buffer
+        */
+        public readonly int column;
+
+        public TextPosition(int line, int column)
+        {
+            this.line = line;
+            this.column = column;
+        }
+    }
+
+    public class LineStarts
+    {
+        public readonly int[] lineStarts;
+        public readonly int cr;
+        public readonly int lf;
+        public readonly int crlf;
+        public readonly bool isBasicASCII;
+        public readonly string EOL;
+        public bool isEOLNormalized => cr == 0 || cr == crlf;
 
         private LineStarts(int[] lineStarts, int cr, int lf, int crlf, bool isBasicASCII, string defaultEOL = "\n")
         {
@@ -75,7 +80,7 @@ namespace PieceTree
             return r.ToArray();
         }
 
-        internal static LineStarts Create(string str, List<int> buffer = null, string defaultEOL = "\n")
+        public static LineStarts Create(string str, List<int> buffer = null, string defaultEOL = "\n")
         {
             if (buffer == null)
                 buffer = new List<int>();
@@ -144,158 +149,6 @@ namespace PieceTree
             return "\n";
         }
 
-    }
-
-    internal struct NodePosition {
-        /**
-        * Piece Index
-        */
-        internal readonly TreeNode node;
-        /**
-        * remainer in current piece.
-        */
-        internal readonly int remainder;
-        /**
-        * node start offset in document.
-        */
-        internal readonly int nodeStartOffset;
-
-        internal NodePosition(TreeNode node, int remainder, int nodeStartOffset)
-        {
-            this.node = node;
-            this.remainder = remainder;
-            this.nodeStartOffset = nodeStartOffset;
-        }
-    }
-
-    public struct TextPosition {
-        /**
-        * Line number in current buffer
-        */
-        public readonly int line;
-        /**
-        * Column number in current buffer
-        */
-        public readonly int column;
-
-        public TextPosition(int line, int column)
-        {
-            this.line = line;
-            this.column = column;
-        }
-    }
-
-    internal class Piece {
-        internal readonly int bufferIndex;
-        internal readonly TextPosition start;
-        internal readonly TextPosition end;
-        internal readonly int length;
-        internal readonly int lineFeedCnt;
-
-        internal Piece(int bufferIndex, TextPosition start, TextPosition end, int lineFeedCnt, int length) {
-            this.bufferIndex = bufferIndex;
-            this.start = start;
-            this.end = end;
-            this.lineFeedCnt = lineFeedCnt;
-            this.length = length;
-        }
-    }
-
-    internal class StringBuffer {
-        internal string buffer;
-        internal int[] lineStarts;
-
-        internal StringBuffer(string buffer, int[] lineStarts) {
-            this.buffer = buffer;
-            this.lineStarts = lineStarts;
-        }
-    }
-
-    internal class CacheEntry {
-        internal TreeNode node;
-        internal int nodeStartOffset;
-        internal int? nodeStartLineNumber;
-
-        internal CacheEntry(TreeNode node, int nodeStartOffset, int? nodeStartLineNumber)
-        {
-            this.node = node;
-            this.nodeStartOffset = nodeStartOffset;
-            this.nodeStartLineNumber = nodeStartLineNumber;
-        }
-    }
-
-    internal class PieceTreeSearchCache {
-        private readonly int _limit;
-        private List<CacheEntry> _cache;
-
-        internal PieceTreeSearchCache(int limit) {
-            this._limit = limit;
-            this._cache = new List<CacheEntry>();
-        }
-
-        internal CacheEntry Get(int offset) {
-            for (var i = this._cache.Count - 1; i >= 0; i--) {
-                var nodePos = this._cache[i];
-                if (nodePos.nodeStartOffset <= offset && nodePos.nodeStartOffset + nodePos.node.piece.length >= offset) {
-                    return nodePos;
-                }
-            }
-            return null;
-        }
-
-        internal CacheEntry Get2(int lineNumber) {
-            for (var i = this._cache.Count - 1; i >= 0; i--) {
-                var nodePos = this._cache[i];
-                if (nodePos.nodeStartLineNumber != null && nodePos.nodeStartLineNumber < lineNumber && nodePos.nodeStartLineNumber + nodePos.node.piece.lineFeedCnt >= lineNumber) {
-                    return nodePos;
-                }
-            }
-            return null;
-        }
-
-        internal void Set(NodePosition nodePosition) {
-            if (this._cache.Count >= this._limit) {
-                this._cache.RemoveAt(0);
-            }
-            this._cache.Add(new CacheEntry(
-                nodePosition.node,
-                nodePosition.nodeStartOffset,
-                null
-            ));
-        }
-
-        internal void Set(CacheEntry nodePosition)
-        {
-            if (this._cache.Count >= this._limit)
-            {
-                this._cache.RemoveAt(0);
-            }
-            this._cache.Add(nodePosition);
-        }
-
-        internal void Validate(int offset) {
-            var hasInvalidVal = false;
-            var tmp = this._cache;
-            for (var i = 0; i < tmp.Count; i++) {
-                var nodePos = tmp[i]!;
-                if (nodePos.node.parent == null || nodePos.nodeStartOffset >= offset) {
-                    tmp[i] = null;
-                    hasInvalidVal = true;
-                    continue;
-                }
-            }
-
-            if (hasInvalidVal) {
-                var newArr = new List<CacheEntry>();
-                foreach (var entry in tmp) {
-                    if (entry != null) {
-                        newArr.Add(entry);
-                    }
-                }
-
-                this._cache = newArr;
-            }
-        }
     }
 
     public class PieceTree {
@@ -1917,6 +1770,163 @@ namespace PieceTree
             return str;
         }
         // #endregion
+    }
+
+    internal struct NodePosition
+    {
+        /**
+        * Piece Index
+        */
+        internal readonly TreeNode node;
+        /**
+        * remainer in current piece.
+        */
+        internal readonly int remainder;
+        /**
+        * node start offset in document.
+        */
+        internal readonly int nodeStartOffset;
+
+        internal NodePosition(TreeNode node, int remainder, int nodeStartOffset)
+        {
+            this.node = node;
+            this.remainder = remainder;
+            this.nodeStartOffset = nodeStartOffset;
+        }
+    }
+
+    internal class Piece
+    {
+        internal readonly int bufferIndex;
+        internal readonly TextPosition start;
+        internal readonly TextPosition end;
+        internal readonly int length;
+        internal readonly int lineFeedCnt;
+
+        internal Piece(int bufferIndex, TextPosition start, TextPosition end, int lineFeedCnt, int length)
+        {
+            this.bufferIndex = bufferIndex;
+            this.start = start;
+            this.end = end;
+            this.lineFeedCnt = lineFeedCnt;
+            this.length = length;
+        }
+    }
+
+    internal class StringBuffer
+    {
+        internal string buffer;
+        internal int[] lineStarts;
+
+        internal StringBuffer(string buffer, int[] lineStarts)
+        {
+            this.buffer = buffer;
+            this.lineStarts = lineStarts;
+        }
+    }
+
+    internal class CacheEntry
+    {
+        internal TreeNode node;
+        internal int nodeStartOffset;
+        internal int? nodeStartLineNumber;
+
+        internal CacheEntry(TreeNode node, int nodeStartOffset, int? nodeStartLineNumber)
+        {
+            this.node = node;
+            this.nodeStartOffset = nodeStartOffset;
+            this.nodeStartLineNumber = nodeStartLineNumber;
+        }
+    }
+
+    internal class PieceTreeSearchCache
+    {
+        private readonly int _limit;
+        private List<CacheEntry> _cache;
+
+        internal PieceTreeSearchCache(int limit)
+        {
+            this._limit = limit;
+            this._cache = new List<CacheEntry>();
+        }
+
+        internal CacheEntry Get(int offset)
+        {
+            for (var i = this._cache.Count - 1; i >= 0; i--)
+            {
+                var nodePos = this._cache[i];
+                if (nodePos.nodeStartOffset <= offset && nodePos.nodeStartOffset + nodePos.node.piece.length >= offset)
+                {
+                    return nodePos;
+                }
+            }
+            return null;
+        }
+
+        internal CacheEntry Get2(int lineNumber)
+        {
+            for (var i = this._cache.Count - 1; i >= 0; i--)
+            {
+                var nodePos = this._cache[i];
+                if (nodePos.nodeStartLineNumber != null && nodePos.nodeStartLineNumber < lineNumber && nodePos.nodeStartLineNumber + nodePos.node.piece.lineFeedCnt >= lineNumber)
+                {
+                    return nodePos;
+                }
+            }
+            return null;
+        }
+
+        internal void Set(NodePosition nodePosition)
+        {
+            if (this._cache.Count >= this._limit)
+            {
+                this._cache.RemoveAt(0);
+            }
+            this._cache.Add(new CacheEntry(
+                nodePosition.node,
+                nodePosition.nodeStartOffset,
+                null
+            ));
+        }
+
+        internal void Set(CacheEntry nodePosition)
+        {
+            if (this._cache.Count >= this._limit)
+            {
+                this._cache.RemoveAt(0);
+            }
+            this._cache.Add(nodePosition);
+        }
+
+        internal void Validate(int offset)
+        {
+            var hasInvalidVal = false;
+            var tmp = this._cache;
+            for (var i = 0; i < tmp.Count; i++)
+            {
+                var nodePos = tmp[i]!;
+                if (nodePos.node.parent == null || nodePos.nodeStartOffset >= offset)
+                {
+                    tmp[i] = null;
+                    hasInvalidVal = true;
+                    continue;
+                }
+            }
+
+            if (hasInvalidVal)
+            {
+                var newArr = new List<CacheEntry>();
+                foreach (var entry in tmp)
+                {
+                    if (entry != null)
+                    {
+                        newArr.Add(entry);
+                    }
+                }
+
+                this._cache = newArr;
+            }
+        }
     }
 
 }
